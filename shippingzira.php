@@ -480,6 +480,10 @@ function zira_shipping_get_cities_by_zone(): array {
 function zira_shipping_get_zone( string $state, string $city ): string {
 	$city_map = zira_shipping_get_city_map();
 
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( '[Zira Shipping] get_zone called: state=[' . $state . '] city=[' . $city . ']' );
+	}
+
 	// 1. Match exacto (formato dropdown: CIUDAD-PROVINCIA)
 	if ( isset( $city_map[ $city ] ) ) {
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -1341,6 +1345,15 @@ function zira_shipping_maybe_update_shipping_cost( \WC_Order $order ): void {
 	$state = strtoupper( $state ?? '' );
 	$city  = $city ?? '';
 	$zone  = zira_shipping_get_zone( $state, $city );
+
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		$post_city  = zira_shipping_get_post_city();
+		$post_state = zira_shipping_get_post_state();
+		error_log( '[Zira Shipping] Admin recalc #' . $order_id .
+			' | POST city=' . $post_city . ' state=' . $post_state .
+			' | ORDER city=' . $city . ' state=' . $state .
+			' | zone=' . $zone );
+	}
 
 	// Construir contenidos
 	$package = array(
