@@ -44,22 +44,52 @@
 	 * Auto-llenar provincia al seleccionar ciudad (admin order).
 	 */
 	function bindCityToProvince() {
-		$(document.body).off('change.ziraAdminProv', '#_billing_city, #_shipping_city');
-		$(document.body).on('change.ziraAdminProv', '#_billing_city, #_shipping_city', function () {
+		console.log('[Zira] bindCityToProvince: buscando campos de ciudad...');
+
+		// Buscar tanto con guion bajo como sin él
+		var $cityFields = $('#_billing_city, #_shipping_city, #billing_city, #shipping_city');
+		console.log('[Zira] Campos de ciudad encontrados:', $cityFields.length);
+
+		$cityFields.each(function () {
+			console.log('[Zira]   -', this.id, '| tag:', this.tagName, '| type attr:', $(this).attr('type'));
+		});
+
+		// Usar off/on para evitar duplicados
+		$(document.body).off('.ziraAdminProv');
+		$(document.body).on('change.ziraAdminProv select2:select.ziraAdminProv', '#_billing_city, #_shipping_city', function (e) {
+			console.log('[Zira] Evento detectado:', e.type, '| id:', this.id);
+
 			var val      = $(this).val() || '';
+			console.log('[Zira] Valor de ciudad:', val);
+
 			var parts    = val.split('-');
 			var province = parts.length > 1 ? parts[parts.length - 1].trim() : '';
+			console.log('[Zira] Provincia extraída:', province);
+
 			var stateCode = PROVINCE_TO_STATE[province.toUpperCase()] || '';
+			console.log('[Zira] State code:', stateCode);
 
 			if (!stateCode) {
+				console.log('[Zira] No se encontró state code para provincia:', province);
 				return;
 			}
 
-			var isBilling = $(this).attr('id') === '_billing_city';
-			var $state    = isBilling ? $('#_billing_state') : $('#_shipping_state');
+			// Determinar qué campo de estado actualizar
+			var fieldId  = $(this).attr('id') || '';
+			var isBilling = fieldId.indexOf('billing') !== -1;
 
-			if ($state.length && !$state.val()) {
+			// Buscar campo de estado: probar con y sin guion bajo
+			var $state = isBilling
+				? $('#_billing_state, #billing_state').first()
+				: $('#_shipping_state, #shipping_state').first();
+
+			console.log('[Zira] Campo state encontrado:', $state.length, '| id:', $state.attr('id'), '| valor actual:', $state.val());
+
+			if ($state.length) {
 				$state.val(stateCode).trigger('change');
+				console.log('[Zira] State actualizado a:', stateCode);
+			} else {
+				console.log('[Zira] ERROR: No se encontró campo de estado para', isBilling ? 'billing' : 'shipping');
 			}
 		});
 	}

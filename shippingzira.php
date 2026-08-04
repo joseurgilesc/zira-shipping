@@ -1161,8 +1161,20 @@ function zira_shipping_auto_add_shipping_hpos( \WC_Order $order ): void {
 /**
  * Si el pedido tiene productos pero no tiene método de envío Zira,
  * lo añade automáticamente.
+ *
+ * Usa static flag para evitar doble ejecución cuando
+ * woocommerce_process_shop_order_meta y woocommerce_before_order_object_save
+ * se disparan ambos en HPOS.
  */
 function zira_shipping_ensure_shipping_method( \WC_Order $order ): void {
+	static $already_ran = array();
+
+	$order_id = $order->get_id();
+	if ( isset( $already_ran[ $order_id ] ) ) {
+		return;
+	}
+	$already_ran[ $order_id ] = true;
+
 	if ( empty( $order->get_items() ) ) {
 		return;
 	}
@@ -1264,8 +1276,18 @@ function zira_shipping_admin_calculate_hpos( \WC_Order $order ): void {
 
 /**
  * Si el pedido tiene Zira Shipping como método, recalcula y actualiza el costo.
+ *
+ * Usa static flag para evitar doble ejecución en HPOS.
  */
 function zira_shipping_maybe_update_shipping_cost( \WC_Order $order ): void {
+	static $already_ran = array();
+
+	$order_id = $order->get_id();
+	if ( isset( $already_ran[ $order_id ] ) ) {
+		return;
+	}
+	$already_ran[ $order_id ] = true;
+
 	$shipping_methods = $order->get_shipping_methods();
 
 	$has_zira = false;
