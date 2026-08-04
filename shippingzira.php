@@ -1275,6 +1275,27 @@ function zira_shipping_mark_removed( $item_id ): void {
 }
 
 /**
+ * Limpia el flag cuando se agrega un envío Zira (manual o auto).
+ */
+add_action( 'woocommerce_new_order_item', 'zira_shipping_clear_removed', 10, 3 );
+
+function zira_shipping_clear_removed( $item_id, $item, $order_id ): void {
+	if ( ! is_a( $item, 'WC_Order_Item_Shipping' ) ) {
+		return;
+	}
+
+	if ( 'zira_shipping' !== $item->get_method_id() ) {
+		return;
+	}
+
+	$order = wc_get_order( $order_id );
+	if ( $order instanceof \WC_Order ) {
+		$order->delete_meta_data( '_zira_shipping_removed' );
+		$order->save();
+	}
+}
+
+/**
  * Si el pedido tiene productos pero no tiene método de envío Zira,
  * lo añade automáticamente.
  *
@@ -1329,6 +1350,7 @@ function zira_shipping_ensure_shipping_method( \WC_Order $order ): void {
 	$item->set_method_id( 'zira_shipping' );
 	$item->set_total( '0' );
 	$order->add_item( $item );
+	$order->delete_meta_data( '_zira_shipping_removed' );
 	$order->save();
 }
 
