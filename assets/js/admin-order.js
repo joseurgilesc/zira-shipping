@@ -144,21 +144,6 @@
 			$box.removeClass('zira-loading');
 			if (res.success && res.data.html) $box.html(res.data.html);
 		}).fail(function () { $box.removeClass('zira-loading'); });
-
-		// Actualizar el costo real del shipping line item
-		$.post(ajaxurl, {
-			action:    'zira_shipping_update_cost',
-			order_id:  orderId,
-			nonce:     nonce,
-			zira_city:  city,
-			zira_state: state,
-		}, function (res) {
-			if (res.success && res.data.updated) {
-				console.log('[Zira] Costo actualizado:', res.data);
-				// Refrescar los ítems del pedido para que el UI muestre el nuevo costo
-				$(document.body).trigger('wc_order_items_reload');
-			}
-		});
 	}
 
 	$(document).ready(function () {

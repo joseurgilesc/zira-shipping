@@ -985,18 +985,13 @@ function zira_shipping_ajax_refresh_metabox(): void {
 }
 
 /**
- * AJAX: actualiza el costo real del shipping line item en el pedido.
- * Se llama cuando cambia la ciudad en el admin, antes de guardar.
+ * AJAX: calcula zona y costo sin guardar nada en la base de datos.
+ * Solo devuelve los valores. El guardado real ocurre al crear/actualizar.
  */
 function zira_shipping_ajax_update_cost(): void {
 	check_ajax_referer( 'zira-shipping-metabox', 'nonce' );
 
 	$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
-	$order    = wc_get_order( $order_id );
-
-	if ( ! $order ) {
-		wp_send_json_error( array( 'message' => 'Pedido no encontrado.' ) );
-	}
 
 	// phpcs:disable WordPress.Security.NonceVerification.Missing
 	$city  = isset( $_POST['zira_city'] ) ? sanitize_text_field( wp_unslash( $_POST['zira_city'] ) ) : '';
@@ -1007,41 +1002,25 @@ function zira_shipping_ajax_update_cost(): void {
 		wp_send_json_error( array( 'message' => 'Ciudad no proporcionada.' ) );
 	}
 
-	$zone   = zira_shipping_get_zone( $state, $city );
-	$weight = zira_shipping_admin_cost_weight( $order );
-	$cost   = zira_shipping_admin_cost( $weight, $zone );
+	$zone = zira_shipping_get_zone( $state, $city );
 
-	// Actualizar el shipping line item
-	$updated = false;
-	foreach ( $order->get_shipping_methods() as $item ) {
-		if ( 'zira_shipping' === $item->get_method_id() ) {
-			$item->set_total( (string) $cost );
-			$item->update_meta_data( 'zira_zone', $zone );
-			$item->update_meta_data( 'zira_weight', (int) $weight );
-			$item->save();
-			$updated = true;
+	// Calcular peso desde el pedido (si existe) o usar 2 kg por defecto
+	$weight = 2.0;
+	if ( $order_id > 0 ) {
+		$order = wc_get_order( $order_id );
+		if ( $order instanceof \WC_Order ) {
+			$weight = zira_shipping_calc_raw_weight( $order );
 		}
 	}
+	$weight_kg = max( 2, (int) ceil( $weight ) );
 
-	if ( $updated ) {
-		$order->calculate_totals( false );
-	}
+	$cost = zira_shipping_admin_cost( $weight_kg, $zone );
 
 	wp_send_json_success( array(
 		'zone'   => $zone,
-		'weight' => (int) $weight,
+		'weight' => $weight_kg,
 		'cost'   => $cost,
-		'updated' => $updated,
 	) );
-}
-
-/**
- * Calcula el peso del pedido para uso en admin (sin depender del método).
- */
-function zira_shipping_admin_cost_weight( \WC_Order $order ): float {
-	$package = array( 'contents' => zira_shipping_build_cart_contents( $order ) );
-	$method  = Zira_Shipping_Method::get_instance();
-	return $method->calculate_cart_weight( $package );
 }
 
 function zira_shipping_weight_metabox_callback( \WP_Post $post ): void {
