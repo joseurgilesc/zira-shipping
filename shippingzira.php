@@ -511,6 +511,12 @@ function zira_shipping_get_zone( string $state, string $city ): string {
 
 	$state = strtoupper( trim( $state ) );
 
+	// Normalizar: quitar prefijo 'EC-' si existe
+	// WooCommerce Ecuador usa EC-A, EC-W, etc.; la lógica espera A, W, etc.
+	if ( str_starts_with( $state, 'EC-' ) ) {
+		$state = substr( $state, 3 );
+	}
+
 	if ( 'W' === $state ) {
 		return 'galapagos';
 	}
@@ -646,21 +652,10 @@ if ( ! class_exists( 'Zira_Shipping_Method' ) ) :
 			$zone   = $this->determine_zone( $package );
 			$cost   = $this->calculate_cost( $weight, $zone );
 
-			$zone_names = array(
-				'local'         => __( 'Local', 'zira-shipping' ),
-				'local_cercano' => __( 'Azuay', 'zira-shipping' ),
-				'nacional'      => __( 'Nacional', 'zira-shipping' ),
-				'oriente'       => __( 'Nacional', 'zira-shipping' ),
-				'galapagos'     => __( 'Galápagos', 'zira-shipping' ),
-			);
-
-			$zone_label = $zone_names[ $zone ] ?? __( 'Nacional', 'zira-shipping' );
-			$label      = sprintf(
-				'%s - Servientrega (%s, %d kg)',
-				$this->title,
-				$zone_label,
-				(int) $weight
-			);
+		$label = sprintf(
+			'Servientrega &middot; %d kg',
+			(int) $weight
+		);
 
 			$this->add_rate( array(
 				'id'       => $this->id . '_servientrega',
