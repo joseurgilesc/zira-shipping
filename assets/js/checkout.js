@@ -152,11 +152,26 @@
 		bindCityToProvince();
 
 		$(document.body).on('updated_checkout', function () {
-			replaceCityTextInputs();
-			initCitySelect();
-			bindCityChange();
-			bindCityToProvince();
+			setTimeout(function () {
+				replaceCityTextInputs();
+				initCitySelect();
+				bindCityChange();
+				bindCityToProvince();
+			}, 100);
 		});
 	});
+
+	// MutationObserver: detectar si el input aparece después (page builders)
+	if (window.MutationObserver) {
+		var observer = new MutationObserver(function () {
+			if ($('#billing_city').length && $('#billing_city').is('input[type="text"]')) {
+				replaceCityTextInputs();
+				initCitySelect();
+				bindCityChange();
+				bindCityToProvince();
+			}
+		});
+		observer.observe(document.body, { childList: true, subtree: true });
+	}
 
 })(jQuery);
