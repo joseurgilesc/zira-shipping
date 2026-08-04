@@ -977,6 +977,20 @@ function zira_shipping_ajax_refresh_metabox(): void {
 	$form_state = isset( $_POST['zira_state'] ) ? sanitize_text_field( wp_unslash( $_POST['zira_state'] ) ) : '';
 	// phpcs:enable
 
+	// Guardar en la orden para que save/recalcular tengan los datos frescos
+	// (sin disparar hooks de recálculo que causarían recursión en AJAX)
+	if ( ! empty( $form_city ) && $order_id > 0 ) {
+		remove_action( 'woocommerce_before_order_object_save', 'zira_shipping_admin_calculate_hpos', 99 );
+		remove_action( 'woocommerce_process_shop_order_meta', 'zira_shipping_admin_calculate', 99 );
+
+		$order->set_billing_city( $form_city );
+		$order->set_billing_state( $form_state );
+		$order->save();
+
+		add_action( 'woocommerce_before_order_object_save', 'zira_shipping_admin_calculate_hpos', 99, 2 );
+		add_action( 'woocommerce_process_shop_order_meta', 'zira_shipping_admin_calculate', 99, 2 );
+	}
+
 	ob_start();
 	zira_shipping_render_weight_metabox_content( $order, $form_city, $form_state );
 	$html = ob_get_clean();
