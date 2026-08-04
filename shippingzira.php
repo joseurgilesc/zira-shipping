@@ -1248,6 +1248,33 @@ function zira_shipping_auto_add_on_create( $order_id, $order ): void {
 }
 
 /**
+ * Marca el pedido cuando el usuario quita manualmente un envío Zira.
+ * Así no se re-agrega en el próximo save.
+ */
+add_action( 'woocommerce_before_delete_order_item', 'zira_shipping_mark_removed' );
+
+function zira_shipping_mark_removed( $item_id ): void {
+	if ( ! function_exists( 'wc_get_order' ) ) {
+		return;
+	}
+
+	$item = \WC_Order_Factory::get_order_item( $item_id );
+	if ( ! $item || ! is_a( $item, 'WC_Order_Item_Shipping' ) ) {
+		return;
+	}
+
+	if ( 'zira_shipping' !== $item->get_method_id() ) {
+		return;
+	}
+
+	$order = $item->get_order();
+	if ( $order instanceof \WC_Order ) {
+		$order->update_meta_data( '_zira_shipping_removed', '1' );
+		$order->save();
+	}
+}
+
+/**
  * Si el pedido tiene productos pero no tiene método de envío Zira,
  * lo añade automáticamente.
  *
@@ -1269,6 +1296,11 @@ function zira_shipping_ensure_shipping_method( \WC_Order $order ): void {
 	}
 
 	if ( ! empty( $order->get_shipping_methods() ) ) {
+		return;
+	}
+
+	// Si el usuario quitó el envío manualmente, no re-agregar
+	if ( $order->get_meta( '_zira_shipping_removed' ) ) {
 		return;
 	}
 
@@ -1388,6 +1420,11 @@ function zira_shipping_maybe_update_shipping_cost( \WC_Order $order ): void {
 	}
 
 	if ( ! $has_zira ) {
+		// Si no hay envío Zira, intentar auto-añadirlo
+		// (útil cuando el usuario cambia la ciudad en un pedido existente)
+		if ( ! empty( $order->get_items() ) && empty( $order->get_shipping_methods() ) ) {
+			zira_shipping_ensure_shipping_method( $order );
+		}
 		return;
 	}
 
