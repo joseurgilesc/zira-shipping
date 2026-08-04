@@ -857,8 +857,8 @@ function zira_shipping_apply_city_select( array $fields, string ...$sections ): 
 		'priority' => 70,
 	);
 
-	// Frontend usa array para class, admin usa string
-	$is_admin = is_admin() || wp_doing_ajax();
+	// Solo en admin real (no durante AJAX del checkout)
+	$is_admin = is_admin() && ! wp_doing_ajax();
 	if ( $is_admin ) {
 		$city_field['class'] = 'form-row-wide address-field';
 	} else {
