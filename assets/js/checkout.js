@@ -2,7 +2,7 @@
  * Zira Shipping — Checkout city selector + auto-provincia.
  *
  * @package Zira_Shipping
- * @since   2.0.0
+ * @since   2.0.2
  */
 
 /* global jQuery, ziraShippingCheckout */
@@ -41,29 +41,17 @@
 	};
 
 	/**
-	 * Obtener placeholder de forma segura.
-	 */
-	function getPlaceholder() {
-		if (typeof ziraShippingCheckout !== 'undefined' && ziraShippingCheckout.placeholder) {
-			return ziraShippingCheckout.placeholder;
-		}
-		return 'Selecciona tu ciudad';
-	}
-
-	/**
-	 * Auto-llenar provincia al seleccionar ciudad (frontend checkout).
+	 * Auto-llenar provincia al seleccionar ciudad.
 	 */
 	function bindCityToProvince() {
-		$(document.body).off('change.ziraProv', '#billing_city, #shipping_city');
-		$(document.body).on('change.ziraProv', '#billing_city, #shipping_city', function () {
+		$(document.body).off('change.ziraProv select2:select.ziraProv', '#billing_city, #shipping_city');
+		$(document.body).on('change.ziraProv select2:select.ziraProv', '#billing_city, #shipping_city', function () {
 			var val      = $(this).val() || '';
 			var parts    = val.split('-');
 			var province = parts.length > 1 ? parts[parts.length - 1].trim() : '';
 			var stateCode = PROVINCE_TO_STATE[province.toUpperCase()] || '';
 
-			if (!stateCode) {
-				return;
-			}
+			if (!stateCode) return;
 
 			var isBilling = $(this).attr('id') === 'billing_city';
 			var $state    = isBilling ? $('#billing_state') : $('#shipping_state');
@@ -75,52 +63,100 @@
 		});
 	}
 
+	/**
+	 * Inicializar select2 en los campos de ciudad.
+	 */
+	function initCitySelect() {
+		$('#billing_city, #shipping_city').each(function () {
+			var $el = $(this);
+			if ($el.length && $el.is('select') && !$el.data('select2')) {
+				$el.select2({
+					placeholder: getPlaceholder(),
+					width: '100%',
+					allowClear: false,
+				});
+			}
+		});
+	}
+
+	/**
+	 * Disparar update_checkout al cambiar ciudad.
+	 */
+	function bindCityChange() {
+		$(document.body).off('change.ziraCity select2:select.ziraCity', '#billing_city, #shipping_city');
+		$(document.body).on('change.ziraCity select2:select.ziraCity', '#billing_city, #shipping_city', function () {
+			$(document.body).trigger('update_checkout');
+		});
+	}
+
+	function getPlaceholder() {
+		if (typeof ziraShippingCheckout !== 'undefined' && ziraShippingCheckout.placeholder) {
+			return ziraShippingCheckout.placeholder;
+		}
+		return 'Selecciona tu ciudad';
+	}
+
+	/**
+	 * Construye el HTML del <select> de ciudades.
+	 * Se usa cuando el tema renderiza el campo como <input type="text">
+	 * en vez de <select>, y no podemos cambiarlo vía PHP.
+	 */
+	function buildCitySelectHtml(fieldId, currentValue) {
+		var cities = ziraShippingCheckout.cities || [];
+		var html = '<select name="' + fieldId + '" id="' + fieldId + '" class="select">';
+		html += '<option value="">' + getPlaceholder() + '</option>';
+
+		for (var i = 0; i < cities.length; i++) {
+			var selected = cities[i].value === currentValue ? ' selected' : '';
+			html += '<option value="' + cities[i].value + '"' + selected + '>' + cities[i].label + '</option>';
+		}
+
+		html += '</select>';
+		return html;
+	}
+
+	/**
+	 * Reemplaza <input type="text"> por <select> si el tema no lo hizo.
+	 */
+	function replaceCityTextInputs() {
+		$('#billing_city, #shipping_city').each(function () {
+			var $el = $(this);
+
+			// Si ya es <select>, no hacer nada
+			if ($el.is('select')) return;
+
+			// Si ya fue reemplazado, no hacer nada
+			if ($el.data('zira-replaced')) return;
+
+			// Solo reemplazar si tenemos datos de ciudades
+			if (!ziraShippingCheckout.cities || !ziraShippingCheckout.cities.length) return;
+
+			var fieldId = $el.attr('id');
+			var currentValue = $el.val() || '';
+			var $newSelect = $(buildCitySelectHtml(fieldId, currentValue));
+
+			// Copiar clases del input original
+			var originalClasses = $el.attr('class') || '';
+			$newSelect.addClass(originalClasses);
+
+			// Reemplazar y marcar
+			$el.replaceWith($newSelect);
+			$newSelect.data('zira-replaced', true);
+		});
+	}
+
 	$(document).ready(function () {
-
-		function initCitySelect() {
-			var $billingCity  = $('#billing_city');
-			var $shippingCity = $('#shipping_city');
-
-			if ($billingCity.length && $billingCity.is('select') && !$billingCity.data('select2')) {
-				$billingCity.select2({
-					placeholder: getPlaceholder(),
-					width: '100%',
-					allowClear: false,
-				});
-			}
-
-			if ($shippingCity.length && $shippingCity.is('select') && !$shippingCity.data('select2')) {
-				$shippingCity.select2({
-					placeholder: getPlaceholder(),
-					width: '100%',
-					allowClear: false,
-				});
-			}
-		}
-
-		function bindCityChange() {
-			$(document.body).off('change.zira', '#billing_city, #shipping_city');
-			$(document.body).on('change.zira', '#billing_city, #shipping_city', function () {
-				$(document.body).trigger('update_checkout');
-			});
-
-			$(document.body).off('select2:select.zira', '#billing_city, #shipping_city');
-			$(document.body).on('select2:select.zira', '#billing_city, #shipping_city', function () {
-				$(document.body).trigger('update_checkout');
-			});
-		}
-
-		// Auto-provincia
+		replaceCityTextInputs();
+		initCitySelect();
+		bindCityChange();
 		bindCityToProvince();
 
 		$(document.body).on('updated_checkout', function () {
+			replaceCityTextInputs();
 			initCitySelect();
 			bindCityChange();
 			bindCityToProvince();
 		});
-
-		initCitySelect();
-		bindCityChange();
 	});
 
 })(jQuery);

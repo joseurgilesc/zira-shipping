@@ -431,11 +431,26 @@ function zira_shipping_get_pricing_table(): array {
 }
 
 /**
- * Retorna las ciudades agrupadas por zona para usar en el checkout.
+ * Retorna las ciudades como array plano para usar en JS.
  *
- * @since  2.0.0
+ * @since  2.0.2
  * @return array
  */
+function zira_shipping_get_cities_flat(): array {
+	$cities_by_zone = zira_shipping_get_cities_by_zone();
+	$flat = array();
+
+	foreach ( $cities_by_zone as $cities ) {
+		foreach ( $cities as $value => $label ) {
+			$flat[] = array(
+				'value' => $value,
+				'label' => $label,
+			);
+		}
+	}
+
+	return $flat;
+}
 function zira_shipping_get_cities_by_zone(): array {
 	static $cities = null;
 
@@ -952,6 +967,7 @@ function zira_shipping_enqueue_assets(): void {
 		'ziraShippingCheckout',
 		array(
 			'placeholder' => __( 'Selecciona tu ciudad', 'zira-shipping' ),
+			'cities'      => zira_shipping_get_cities_flat(),
 		)
 	);
 }
