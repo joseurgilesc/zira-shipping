@@ -1047,9 +1047,30 @@ function zira_shipping_render_weight_metabox_content( \WC_Order $order ): void {
 	echo '<p><strong>' . esc_html__( 'Zona:', 'zira-shipping' ) . '</strong> ' . esc_html( $zone_label ) . '</p>';
 	echo '<p style="margin-top:6px"><strong>' . esc_html__( 'Servientrega:', 'zira-shipping' ) . '</strong> <span class="zira-big">$' . esc_html( number_format( $cost, 2 ) ) . '</span></p>';
 
-	// DEBUG TEMPORAL: quitar cuando funcione
-	echo '<hr style="margin:6px 0;border:none;border-top:1px solid #eee">';
-	echo '<p style="font-size:9px;color:#ccc;word-break:break-all">DEBUG: city=[' . esc_html( $city ) . '] state=[' . esc_html( $state ) . '] zone=[' . esc_html( $zone ) . ']</p>';
+	// ── DEBUG: visible solo con WP_DEBUG ─────────────────
+	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		$post_city  = zira_shipping_get_post_city();
+		$post_state = zira_shipping_get_post_state();
+
+		echo '<hr style="margin:6px 0;border:none;border-top:1px dashed #e74c3c">';
+		echo '<p style="font-size:10px;color:#e74c3c;margin:2px 0"><strong>🔍 DEBUG</strong></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">POST city: <code>' . esc_html( $post_city ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">POST state: <code>' . esc_html( $post_state ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">ORDER city: <code>' . esc_html( $city ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">ORDER state: <code>' . esc_html( $state ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">Zona resuelta: <code>' . esc_html( $zone ) . '</code></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">Weight (kg): <code>' . esc_html( (int) $weight ) . '</code></p>';
+		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">Cost calc: <code>$' . esc_html( number_format( $cost, 2 ) ) . '</code></p>';
+
+		$order_shipping_city  = $order->get_shipping_city();
+		$order_shipping_state = $order->get_shipping_state();
+		$order_billing_city   = $order->get_billing_city();
+		$order_billing_state  = $order->get_billing_state();
+		echo '<p style="font-size:9px;color:#999;margin:1px 0">shipping_city: <code>' . esc_html( $order_shipping_city ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:9px;color:#999;margin:1px 0">shipping_state: <code>' . esc_html( $order_shipping_state ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:9px;color:#999;margin:1px 0">billing_city: <code>' . esc_html( $order_billing_city ?: '(vacío)' ) . '</code></p>';
+		echo '<p style="font-size:9px;color:#999;margin:1px 0">billing_state: <code>' . esc_html( $order_billing_state ?: '(vacío)' ) . '</code></p>';
+	}
 
 	echo '</div>';
 }
