@@ -823,15 +823,16 @@ add_filter( 'woocommerce_admin_shipping_fields', 'zira_shipping_admin_city_selec
  * Forzar el campo ciudad como <select> en el frontend.
  * Algunos temas no respetan el type='select' del array de fields.
  */
-add_filter( 'woocommerce_form_field_city', 'zira_shipping_force_city_select', 99, 4 );
+add_filter( 'woocommerce_form_field_billing_city', 'zira_shipping_force_city_select', 99, 4 );
+add_filter( 'woocommerce_form_field_shipping_city', 'zira_shipping_force_city_select', 99, 4 );
 
 function zira_shipping_force_city_select( $field, $key, $args, $value ): string {
-	// Solo en el checkout (no admin)
-	if ( is_admin() || ! is_checkout() ) {
+	// Solo en frontend
+	if ( is_admin() ) {
 		return $field;
 	}
 
-	// Solo para campos de ciudad
+	// Solo para billing_city y shipping_city
 	if ( 'billing_city' !== $key && 'shipping_city' !== $key ) {
 		return $field;
 	}
