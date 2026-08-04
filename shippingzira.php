@@ -1345,10 +1345,17 @@ function zira_shipping_ensure_shipping_method( \WC_Order $order ): void {
 		return;
 	}
 
+	// Calcular peso y costo real (no dejar en $0)
+	$weight = zira_shipping_calc_raw_weight( $order );
+	$weight_kg = max( 2, (int) ceil( $weight ) );
+	$cost = zira_shipping_admin_cost( $weight_kg, $zone );
+
 	$item = new \WC_Order_Item_Shipping();
 	$item->set_method_title( __( 'Envío Nacional - Servientrega', 'zira-shipping' ) );
 	$item->set_method_id( 'zira_shipping' );
-	$item->set_total( '0' );
+	$item->set_total( (string) $cost );
+	$item->update_meta_data( 'zira_zone', $zone );
+	$item->update_meta_data( 'zira_weight', $weight_kg );
 	$order->add_item( $item );
 	$order->delete_meta_data( '_zira_shipping_removed' );
 	$order->save();
@@ -1426,10 +1433,14 @@ function zira_shipping_maybe_update_shipping_cost( \WC_Order $order ): void {
 	static $already_ran = array();
 
 	$order_id = $order->get_id();
-	if ( isset( $already_ran[ $order_id ] ) ) {
+
+	// Para pedidos nuevos (id=0), permitir siempre (el flag por ID no funciona)
+	if ( $order_id > 0 && isset( $already_ran[ $order_id ] ) ) {
 		return;
 	}
-	$already_ran[ $order_id ] = true;
+	if ( $order_id > 0 ) {
+		$already_ran[ $order_id ] = true;
+	}
 
 	$shipping_methods = $order->get_shipping_methods();
 
