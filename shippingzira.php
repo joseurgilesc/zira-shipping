@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zira Shipping
  * Description: Método de envío nacional con tarifas por zona basadas en Servientrega. Origen: Cuenca.
- * Version: 2.0.1
+ * Version: 2.0.2
  * Author: José Urgilés
  * Text Domain: zira-shipping
  * Domain Path: /languages
@@ -27,7 +27,7 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 }
 
 // ─── Constantes ────────────────────────────────────────────────
-define( 'ZIRA_SHIPPING_VERSION', '2.0.1' );
+define( 'ZIRA_SHIPPING_VERSION', '2.0.2' );
 define( 'ZIRA_SHIPPING_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'ZIRA_SHIPPING_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
@@ -948,9 +948,10 @@ add_action( 'wp_ajax_zira_shipping_refresh_metabox', 'zira_shipping_ajax_refresh
 add_action( 'wp_ajax_zira_shipping_update_cost', 'zira_shipping_ajax_update_cost' );
 
 function zira_shipping_add_weight_metabox(): void {
+	$logo_url = ZIRA_SHIPPING_PLUGIN_URL . 'images/logoservientrega.png';
 	add_meta_box(
 		'zira-shipping-weight',
-		__( '🚚 Servientrega — Peso y Tarifa', 'zira-shipping' ),
+		'<img src="' . esc_url( $logo_url ) . '" width="65" style="vertical-align:middle;margin-right:6px" alt="Servientrega" />' . __( 'Servientrega — Peso y Tarifa', 'zira-shipping' ),
 		'zira_shipping_weight_metabox_callback',
 		'shop_order',
 		'side',
@@ -1052,10 +1053,8 @@ function zira_shipping_weight_metabox_callback( \WP_Post $post ): void {
 }
 
 function zira_shipping_render_weight_metabox_content( \WC_Order $order, string $form_city = '', string $form_state = '' ): void {
-	$package   = array( 'contents' => zira_shipping_build_cart_contents( $order ) );
-	$method    = Zira_Shipping_Method::get_instance();
-	$weight    = $method->calculate_cart_weight( $package );
 	$raw_weight = zira_shipping_calc_raw_weight( $order );
+	$weight_kg = max( 2, (int) ceil( $raw_weight ) );
 
 	// Priorizar datos del formulario (JS auto-province), luego del pedido guardado
 	if ( ! empty( $form_city ) ) {
@@ -1065,8 +1064,8 @@ function zira_shipping_render_weight_metabox_content( \WC_Order $order, string $
 		$city  = $order->get_shipping_city() ?: $order->get_billing_city();
 		$state = strtoupper( ( $order->get_shipping_state() ?: $order->get_billing_state() ) ?? '' );
 	}
-	$zone      = zira_shipping_get_zone( $state, $city ?? '' );
-	$cost      = zira_shipping_admin_cost( $weight, $zone );
+	$zone = zira_shipping_get_zone( $state, $city ?? '' );
+	$cost = zira_shipping_admin_cost( $weight_kg, $zone );
 
 	$zone_names = array(
 		'local'         => '📍 Local (Cuenca)',
@@ -1108,35 +1107,10 @@ function zira_shipping_render_weight_metabox_content( \WC_Order $order, string $
 	}
 
 	echo '<p><strong>' . esc_html__( 'Peso real:', 'zira-shipping' ) . '</strong> ' . esc_html( number_format( $raw_weight, 2 ) ) . ' kg</p>';
-	echo '<p class="zira-round">' . esc_html__( 'Redondeo Servientrega:', 'zira-shipping' ) . ' ' . esc_html( number_format( $raw_weight, 2 ) ) . ' → <strong>' . esc_html( (int) $weight ) . ' kg</strong></p>';
+	echo '<p class="zira-round">' . esc_html__( 'Redondeo Servientrega:', 'zira-shipping' ) . ' ' . esc_html( number_format( $raw_weight, 2 ) ) . ' → <strong>' . esc_html( $weight_kg ) . ' kg</strong></p>';
 	echo '<p><strong>' . esc_html__( 'Ciudad:', 'zira-shipping' ) . '</strong> ' . esc_html( $city_short ?: '—' ) . '</p>';
 	echo '<p><strong>' . esc_html__( 'Zona:', 'zira-shipping' ) . '</strong> ' . esc_html( $zone_label ) . '</p>';
 	echo '<p style="margin-top:6px"><strong>' . esc_html__( 'Servientrega:', 'zira-shipping' ) . '</strong> <span class="zira-big">$' . esc_html( number_format( $cost, 2 ) ) . '</span></p>';
-
-	// ── DEBUG: visible solo con WP_DEBUG ─────────────────
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$post_city  = zira_shipping_get_post_city();
-		$post_state = zira_shipping_get_post_state();
-
-		echo '<hr style="margin:6px 0;border:none;border-top:1px dashed #e74c3c">';
-		echo '<p style="font-size:10px;color:#e74c3c;margin:2px 0"><strong>🔍 DEBUG</strong></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">POST city: <code>' . esc_html( $post_city ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">POST state: <code>' . esc_html( $post_state ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">ORDER city: <code>' . esc_html( $city ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">ORDER state: <code>' . esc_html( $state ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">Zona resuelta: <code>' . esc_html( $zone ) . '</code></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">Weight (kg): <code>' . esc_html( (int) $weight ) . '</code></p>';
-		echo '<p style="font-size:10px;color:#c0392b;margin:1px 0">Cost calc: <code>$' . esc_html( number_format( $cost, 2 ) ) . '</code></p>';
-
-		$order_shipping_city  = $order->get_shipping_city();
-		$order_shipping_state = $order->get_shipping_state();
-		$order_billing_city   = $order->get_billing_city();
-		$order_billing_state  = $order->get_billing_state();
-		echo '<p style="font-size:9px;color:#999;margin:1px 0">shipping_city: <code>' . esc_html( $order_shipping_city ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:9px;color:#999;margin:1px 0">shipping_state: <code>' . esc_html( $order_shipping_state ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:9px;color:#999;margin:1px 0">billing_city: <code>' . esc_html( $order_billing_city ?: '(vacío)' ) . '</code></p>';
-		echo '<p style="font-size:9px;color:#999;margin:1px 0">billing_state: <code>' . esc_html( $order_billing_state ?: '(vacío)' ) . '</code></p>';
-	}
 
 	echo '</div>';
 }
@@ -1502,35 +1476,34 @@ function zira_shipping_maybe_update_shipping_cost( \WC_Order $order ): void {
 	$city  = $city ?? '';
 	$zone  = zira_shipping_get_zone( $state, $city );
 
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		$post_city  = zira_shipping_get_post_city();
-		$post_state = zira_shipping_get_post_state();
-		error_log( '[Zira Shipping] Admin recalc #' . $order_id .
-			' | POST city=' . $post_city . ' state=' . $post_state .
-			' | ORDER city=' . $city . ' state=' . $state .
-			' | zone=' . $zone );
+	// Si es zona local o cercana, quitar envío Zira (se ingresa manual)
+	if ( 'local' === $zone || 'local_cercano' === $zone ) {
+		$items_to_remove = array();
+		foreach ( $shipping_methods as $item_id => $item ) {
+			if ( 'zira_shipping' === $item->get_method_id() ) {
+				$items_to_remove[] = $item_id;
+			}
+		}
+		foreach ( $items_to_remove as $item_id ) {
+			$order->remove_item( $item_id );
+		}
+		if ( ! empty( $items_to_remove ) ) {
+			$order->save();
+		}
+		return;
 	}
 
 	// Construir contenidos
-	$package = array(
-		'contents'    => zira_shipping_build_cart_contents( $order ),
-		'destination' => array( 'state' => $state, 'city' => $city ),
-	);
+	$weight = zira_shipping_calc_raw_weight( $order );
+	$weight_kg = max( 2, (int) ceil( $weight ) );
+	$cost = zira_shipping_admin_cost( $weight_kg, $zone );
 
-	$shipping_method = Zira_Shipping_Method::get_instance();
-	$weight          = $shipping_method->calculate_cart_weight( $package );
-	$cost            = zira_shipping_admin_cost( $weight, $zone );
-
-	if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-		error_log( "[Zira Shipping] Admin recalc: city=$city state=$state zone=$zone weight=$weight cost=$cost" );
-	}
-
-	// Actualizar cada línea de envío de Zira y guardar metadata
+	// Actualizar cada línea de envío de Zira
 	foreach ( $shipping_methods as $item_id => $item ) {
 		if ( 'zira_shipping' === $item->get_method_id() ) {
 			$item->set_total( (string) $cost );
 			$item->update_meta_data( 'zira_zone', $zone );
-			$item->update_meta_data( 'zira_weight', (int) $weight );
+			$item->update_meta_data( 'zira_weight', $weight_kg );
 			$item->save();
 		}
 	}

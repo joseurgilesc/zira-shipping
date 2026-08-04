@@ -44,64 +44,34 @@
 	 * Auto-llenar provincia al seleccionar ciudad (admin order).
 	 */
 	function bindCityToProvince() {
-		console.log('[Zira] bindCityToProvince: buscando campos de ciudad...');
-
-		// Buscar tanto con guion bajo como sin él
-		var $cityFields = $('#_billing_city, #_shipping_city, #billing_city, #shipping_city');
-		console.log('[Zira] Campos de ciudad encontrados:', $cityFields.length);
-
-		$cityFields.each(function () {
-			console.log('[Zira]   -', this.id, '| tag:', this.tagName, '| type attr:', $(this).attr('type'));
-		});
-
-		var recalcTimeout;
-
-		// Usar off/on para evitar duplicados
 		$(document.body).off('.ziraAdminProv');
 		$(document.body).on('change.ziraAdminProv select2:select.ziraAdminProv', '#_billing_city, #_shipping_city', function (e) {
-			console.log('[Zira] Evento detectado:', e.type, '| id:', this.id);
-
 			var val      = $(this).val() || '';
-			console.log('[Zira] Valor de ciudad:', val);
-
 			var parts    = val.split('-');
 			var province = parts.length > 1 ? parts[parts.length - 1].trim() : '';
-			console.log('[Zira] Provincia extraída:', province);
-
 			var stateCode = PROVINCE_TO_STATE[province.toUpperCase()] || '';
-			console.log('[Zira] State code:', stateCode);
 
 			if (!stateCode) {
-				console.log('[Zira] No se encontró state code para provincia:', province);
 				return;
 			}
 
-			// Determinar qué campo de estado actualizar
 			var fieldId  = $(this).attr('id') || '';
 			var isBilling = fieldId.indexOf('billing') !== -1;
-
-			// Buscar campo de estado: probar con y sin guion bajo
 			var $state = isBilling
 				? $('#_billing_state, #billing_state').first()
 				: $('#_shipping_state, #shipping_state').first();
 
-			console.log('[Zira] Campo state encontrado:', $state.length, '| id:', $state.attr('id'), '| valor actual:', $state.val());
-
 			if ($state.length) {
 				$state.val(stateCode).trigger('change');
-				console.log('[Zira] State actualizado a:', stateCode);
-			} else {
-				console.log('[Zira] ERROR: No se encontró campo de estado para', isBilling ? 'billing' : 'shipping');
+				clearTimeout(recalcTimeout);
+				recalcTimeout = setTimeout(function () {
+					refreshMetaboxWithData(val, stateCode);
+				}, 400);
 			}
-
-			// Refrescar metabox con los nuevos valores (sin esperar recálculo)
-			clearTimeout(recalcTimeout);
-			recalcTimeout = setTimeout(function () {
-				console.log('[Zira] Refrescando metabox con ciudad=' + val + ' state=' + stateCode);
-				refreshMetaboxWithData(val, stateCode);
-			}, 400);
 		});
 	}
+
+	var recalcTimeout;
 
 	function refreshMetabox() {
 		var $box    = $('#zira-shipping-metabox-content');
