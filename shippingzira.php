@@ -656,9 +656,18 @@ if ( ! class_exists( 'Zira_Shipping_Method' ) ) :
 			$zone   = $this->determine_zone( $package );
 			$cost   = $this->calculate_cost( $weight, $zone );
 
+		$zone_names = array(
+			'local'         => __( 'Local', 'zira-shipping' ),
+			'local_cercano' => __( 'Azuay', 'zira-shipping' ),
+			'nacional'      => __( 'Nacional', 'zira-shipping' ),
+			'oriente'       => __( 'Nacional', 'zira-shipping' ),
+			'galapagos'     => __( 'Galápagos', 'zira-shipping' ),
+		);
+
+		$zone_label = $zone_names[ $zone ] ?? __( 'Nacional', 'zira-shipping' );
 		$label = sprintf(
-			'Servientrega &middot; %d kg',
-			(int) $weight
+			'Servientrega (%s)',
+			$zone_label
 		);
 
 			$this->add_rate( array(
@@ -1567,22 +1576,12 @@ function zira_shipping_method_label( string $full_label, $method ): string {
 
 	$logo_url = ZIRA_SHIPPING_PLUGIN_URL . 'images/logoservientrega.png?v=' . ZIRA_SHIPPING_VERSION;
 
-	$meta    = $method->get_meta_data();
-	$zone    = $meta['zira_zone'] ?? '';
-
-	$zone_badge = '';
-	if ( 'local' === $zone || 'local_cercano' === $zone ) {
-		$zone_badge = '<span class="zira-badge zira-badge--best">' . esc_html__( 'Mejor precio', 'zira-shipping' ) . '</span>';
-	}
-
 	return sprintf(
 		'<div class="zira-shipping-row">'
 			. '<img src="%s" width="40" height="20" class="zira-shipping-logo" alt="Servientrega" />'
 			. '<span class="zira-shipping-label">%s</span>'
-			. '%s'
 		. '</div>',
 		esc_url( $logo_url ),
-		$full_label,
-		$zone_badge
+		$full_label
 	);
 }

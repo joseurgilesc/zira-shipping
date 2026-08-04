@@ -145,9 +145,9 @@
 		initAdminCitySelect();
 
 		$('<style>\
-			.zira-loading{opacity:.4;pointer-events:none;transition:opacity .2s}\
-			@keyframes zira-pulse{0%,100%{background:transparent}50%{background:rgba(0,140,69,.08)}}\
-			#zira-shipping-metabox-content.zira-loading{animation:zira-pulse 1s ease-in-out}\
+			.zira-loading{opacity:.7;pointer-events:none;transition:all .15s}\
+			@keyframes zira-flash{0%{background:#e8f5e9;box-shadow:0 0 8px rgba(0,140,69,.3)}100%{background:transparent;box-shadow:none}}\
+			#zira-shipping-metabox-content.zira-loading{animation:zira-flash .8s ease-out}\
 		</style>').appendTo('head');
 	});
 
