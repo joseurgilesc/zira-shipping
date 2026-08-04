@@ -132,6 +132,7 @@
 
 		if (!nonce || !$box.length) return;
 
+		// Refrescar el panel lateral
 		$box.addClass('zira-loading');
 		$.post(ajaxurl, {
 			action:   'zira_shipping_refresh_metabox',
@@ -143,6 +144,21 @@
 			$box.removeClass('zira-loading');
 			if (res.success && res.data.html) $box.html(res.data.html);
 		}).fail(function () { $box.removeClass('zira-loading'); });
+
+		// Actualizar el costo real del shipping line item
+		$.post(ajaxurl, {
+			action:    'zira_shipping_update_cost',
+			order_id:  orderId,
+			nonce:     nonce,
+			zira_city:  city,
+			zira_state: state,
+		}, function (res) {
+			if (res.success && res.data.updated) {
+				console.log('[Zira] Costo actualizado:', res.data);
+				// Refrescar los ítems del pedido para que el UI muestre el nuevo costo
+				$(document.body).trigger('wc_order_items_reload');
+			}
+		});
 	}
 
 	$(document).ready(function () {
@@ -173,7 +189,11 @@
 		});
 		initAdminCitySelect();
 
-		$('<style>.zira-loading{opacity:.4;pointer-events:none}</style>').appendTo('head');
+		$('<style>\
+			.zira-loading{opacity:.4;pointer-events:none;transition:opacity .2s}\
+			@keyframes zira-pulse{0%,100%{background:transparent}50%{background:rgba(0,140,69,.08)}}\
+			#zira-shipping-metabox-content.zira-loading{animation:zira-pulse 1s ease-in-out}\
+		</style>').appendTo('head');
 	});
 
 })(jQuery);

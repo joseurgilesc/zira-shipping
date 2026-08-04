@@ -945,6 +945,7 @@ function zira_shipping_admin_enqueue_assets( string $hook ): void {
 
 add_action( 'add_meta_boxes', 'zira_shipping_add_weight_metabox' );
 add_action( 'wp_ajax_zira_shipping_refresh_metabox', 'zira_shipping_ajax_refresh_metabox' );
+add_action( 'wp_ajax_zira_shipping_update_cost', 'zira_shipping_ajax_update_cost' );
 
 function zira_shipping_add_weight_metabox(): void {
 	add_meta_box(
@@ -981,6 +982,66 @@ function zira_shipping_ajax_refresh_metabox(): void {
 	$html = ob_get_clean();
 
 	wp_send_json_success( array( 'html' => $html ) );
+}
+
+/**
+ * AJAX: actualiza el costo real del shipping line item en el pedido.
+ * Se llama cuando cambia la ciudad en el admin, antes de guardar.
+ */
+function zira_shipping_ajax_update_cost(): void {
+	check_ajax_referer( 'zira-shipping-metabox', 'nonce' );
+
+	$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+	$order    = wc_get_order( $order_id );
+
+	if ( ! $order ) {
+		wp_send_json_error( array( 'message' => 'Pedido no encontrado.' ) );
+	}
+
+	// phpcs:disable WordPress.Security.NonceVerification.Missing
+	$city  = isset( $_POST['zira_city'] ) ? sanitize_text_field( wp_unslash( $_POST['zira_city'] ) ) : '';
+	$state = isset( $_POST['zira_state'] ) ? sanitize_text_field( wp_unslash( $_POST['zira_state'] ) ) : '';
+	// phpcs:enable
+
+	if ( empty( $city ) ) {
+		wp_send_json_error( array( 'message' => 'Ciudad no proporcionada.' ) );
+	}
+
+	$zone   = zira_shipping_get_zone( $state, $city );
+	$weight = zira_shipping_admin_cost_weight( $order );
+	$cost   = zira_shipping_admin_cost( $weight, $zone );
+
+	// Actualizar el shipping line item
+	$updated = false;
+	foreach ( $order->get_shipping_methods() as $item ) {
+		if ( 'zira_shipping' === $item->get_method_id() ) {
+			$item->set_total( (string) $cost );
+			$item->update_meta_data( 'zira_zone', $zone );
+			$item->update_meta_data( 'zira_weight', (int) $weight );
+			$item->save();
+			$updated = true;
+		}
+	}
+
+	if ( $updated ) {
+		$order->calculate_totals( false );
+	}
+
+	wp_send_json_success( array(
+		'zone'   => $zone,
+		'weight' => (int) $weight,
+		'cost'   => $cost,
+		'updated' => $updated,
+	) );
+}
+
+/**
+ * Calcula el peso del pedido para uso en admin (sin depender del método).
+ */
+function zira_shipping_admin_cost_weight( \WC_Order $order ): float {
+	$package = array( 'contents' => zira_shipping_build_cart_contents( $order ) );
+	$method  = Zira_Shipping_Method::get_instance();
+	return $method->calculate_cart_weight( $package );
 }
 
 function zira_shipping_weight_metabox_callback( \WP_Post $post ): void {
@@ -1191,20 +1252,19 @@ function zira_shipping_auto_fill_province( $order_id, $order = null ): void {
 	// phpcs:enable
 }
 
-// ─── Admin: Auto-añadir envío Zira si no hay método ──────────
+// ─── Admin: Auto-añadir envío Zira al CREAR pedido ──────────
+// Solo en la primera creación (woocommerce_new_order), NO en cada save.
+// Así el usuario puede quitar el envío manualmente sin que se re-agregue.
 
-add_action( 'woocommerce_process_shop_order_meta', 'zira_shipping_auto_add_shipping', 50, 2 );
-add_action( 'woocommerce_before_order_object_save', 'zira_shipping_auto_add_shipping_hpos', 50, 1 );
+add_action( 'woocommerce_new_order', 'zira_shipping_auto_add_on_create', 50, 2 );
 
-function zira_shipping_auto_add_shipping( $order_id, $order = null ): void {
-	$order = $order ?: wc_get_order( $order_id );
+function zira_shipping_auto_add_on_create( $order_id, $order ): void {
+	if ( ! $order instanceof \WC_Order ) {
+		$order = wc_get_order( $order_id );
+	}
 	if ( ! $order instanceof \WC_Order ) {
 		return;
 	}
-	zira_shipping_ensure_shipping_method( $order );
-}
-
-function zira_shipping_auto_add_shipping_hpos( \WC_Order $order ): void {
 	zira_shipping_ensure_shipping_method( $order );
 }
 
