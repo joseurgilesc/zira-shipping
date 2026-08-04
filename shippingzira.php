@@ -815,9 +815,49 @@ function zira_add_shipping_method( array $methods ): array {
 
 // ─── Checkout: Selector de Ciudad (frontend + admin) ──────────
 
-add_filter( 'woocommerce_checkout_fields', 'zira_shipping_city_select' );
+add_filter( 'woocommerce_checkout_fields', 'zira_shipping_city_select', 99 );
 add_filter( 'woocommerce_admin_billing_fields', 'zira_shipping_admin_city_select' );
 add_filter( 'woocommerce_admin_shipping_fields', 'zira_shipping_admin_city_select' );
+
+/**
+ * Forzar el campo ciudad como <select> en el frontend.
+ * Algunos temas no respetan el type='select' del array de fields.
+ */
+add_filter( 'woocommerce_form_field_city', 'zira_shipping_force_city_select', 99, 4 );
+
+function zira_shipping_force_city_select( $field, $key, $args, $value ): string {
+	// Solo en el checkout (no admin)
+	if ( is_admin() || ! is_checkout() ) {
+		return $field;
+	}
+
+	// Solo para campos de ciudad
+	if ( 'billing_city' !== $key && 'shipping_city' !== $key ) {
+		return $field;
+	}
+
+	$cities_by_zone = zira_shipping_get_cities_by_zone();
+
+	$options_html = '<option value="">' . esc_html__( '— Selecciona tu ciudad —', 'zira-shipping' ) . '</option>';
+	foreach ( $cities_by_zone as $cities ) {
+		foreach ( $cities as $city_value => $city_label ) {
+			$selected = selected( $value, $city_value, false );
+			$options_html .= '<option value="' . esc_attr( $city_value ) . '" ' . $selected . '>' . esc_html( $city_label ) . '</option>';
+		}
+	}
+
+	$field_id = esc_attr( $key );
+	$required = ! empty( $args['required'] ) ? ' <abbr class="required" title="' . esc_attr__( 'required', 'woocommerce' ) . '">*</abbr>' : '';
+
+	return '<p class="form-row form-row-wide address-field" id="' . $field_id . '_field">'
+		. '<label for="' . $field_id . '" class="">' . esc_html__( 'Ciudad', 'zira-shipping' ) . $required . '</label>'
+		. '<span class="woocommerce-input-wrapper">'
+		. '<select name="' . $field_id . '" id="' . $field_id . '" class="select">'
+		. $options_html
+		. '</select>'
+		. '</span>'
+		. '</p>';
+}
 
 /**
  * Reemplaza el campo ciudad en el checkout del frontend.
