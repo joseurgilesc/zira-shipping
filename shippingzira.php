@@ -911,7 +911,20 @@ function zira_shipping_admin_enqueue_assets( string $hook ): void {
 	}
 
 	global $post;
-	if ( ! $post || 'shop_order' !== $post->post_type ) {
+
+	// post-new.php no tiene $post aún — verificar por query param
+	$post_type = '';
+	if ( $post && ! empty( $post->post_type ) ) {
+		$post_type = $post->post_type;
+	} elseif ( ! empty( $_GET['post_type'] ) ) {
+		$post_type = sanitize_text_field( wp_unslash( $_GET['post_type'] ) );
+	} elseif ( ! empty( $_GET['post'] ) ) {
+		// Editar post existente vía post.php?post=123
+		$p = get_post( absint( $_GET['post'] ) );
+		$post_type = $p ? $p->post_type : '';
+	}
+
+	if ( 'shop_order' !== $post_type ) {
 		return;
 	}
 
