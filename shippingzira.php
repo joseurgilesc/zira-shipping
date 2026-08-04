@@ -970,8 +970,14 @@ function zira_shipping_ajax_refresh_metabox(): void {
 		wp_send_json_error( array( 'html' => '<p>Pedido no encontrado.</p>' ) );
 	}
 
+	// Ciudad y provincia enviadas desde el formulario (JS)
+	// phpcs:disable WordPress.Security.NonceVerification.Missing
+	$form_city  = isset( $_POST['zira_city'] ) ? sanitize_text_field( wp_unslash( $_POST['zira_city'] ) ) : '';
+	$form_state = isset( $_POST['zira_state'] ) ? sanitize_text_field( wp_unslash( $_POST['zira_state'] ) ) : '';
+	// phpcs:enable
+
 	ob_start();
-	zira_shipping_render_weight_metabox_content( $order );
+	zira_shipping_render_weight_metabox_content( $order, $form_city, $form_state );
 	$html = ob_get_clean();
 
 	wp_send_json_success( array( 'html' => $html ) );
@@ -991,14 +997,20 @@ function zira_shipping_weight_metabox_callback( \WP_Post $post ): void {
 	echo '</div>';
 }
 
-function zira_shipping_render_weight_metabox_content( \WC_Order $order ): void {
+function zira_shipping_render_weight_metabox_content( \WC_Order $order, string $form_city = '', string $form_state = '' ): void {
 	$package   = array( 'contents' => zira_shipping_build_cart_contents( $order ) );
 	$method    = Zira_Shipping_Method::get_instance();
 	$weight    = $method->calculate_cart_weight( $package );
 	$raw_weight = zira_shipping_calc_raw_weight( $order );
 
-	$city      = $order->get_shipping_city() ?: $order->get_billing_city();
-	$state     = strtoupper( ( $order->get_shipping_state() ?: $order->get_billing_state() ) ?? '' );
+	// Priorizar datos del formulario (JS auto-province), luego del pedido guardado
+	if ( ! empty( $form_city ) ) {
+		$city  = $form_city;
+		$state = $form_state;
+	} else {
+		$city  = $order->get_shipping_city() ?: $order->get_billing_city();
+		$state = strtoupper( ( $order->get_shipping_state() ?: $order->get_billing_state() ) ?? '' );
+	}
 	$zone      = zira_shipping_get_zone( $state, $city ?? '' );
 	$cost      = zira_shipping_admin_cost( $weight, $zone );
 

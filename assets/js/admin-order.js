@@ -94,11 +94,11 @@
 				console.log('[Zira] ERROR: No se encontró campo de estado para', isBilling ? 'billing' : 'shipping');
 			}
 
-			// Disparar recálculo automático (con debounce para evitar doble disparo)
+			// Refrescar metabox con los nuevos valores (sin esperar recálculo)
 			clearTimeout(recalcTimeout);
 			recalcTimeout = setTimeout(function () {
-				console.log('[Zira] Disparando recálculo automático...');
-				$('.calculate-action').trigger('click');
+				console.log('[Zira] Refrescando metabox con ciudad=' + val + ' state=' + stateCode);
+				refreshMetaboxWithData(val, stateCode);
 			}, 400);
 		});
 	}
@@ -115,6 +115,30 @@
 			action: 'zira_shipping_refresh_metabox',
 			order_id: orderId,
 			nonce: nonce,
+		}, function (res) {
+			$box.removeClass('zira-loading');
+			if (res.success && res.data.html) $box.html(res.data.html);
+		}).fail(function () { $box.removeClass('zira-loading'); });
+	}
+
+	/**
+	 * Refresca el metabox pasando ciudad y provincia del formulario.
+	 * Así no necesita que el pedido esté guardado.
+	 */
+	function refreshMetaboxWithData(city, state) {
+		var $box    = $('#zira-shipping-metabox-content');
+		var orderId = $('#post_ID').val();
+		var nonce   = $('#zira_shipping_metabox_nonce').val();
+
+		if (!nonce || !$box.length) return;
+
+		$box.addClass('zira-loading');
+		$.post(ajaxurl, {
+			action:   'zira_shipping_refresh_metabox',
+			order_id: orderId,
+			nonce:    nonce,
+			zira_city:  city,
+			zira_state: state,
 		}, function (res) {
 			$box.removeClass('zira-loading');
 			if (res.success && res.data.html) $box.html(res.data.html);
