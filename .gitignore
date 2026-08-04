@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Internal tooling
+.atl/
+
+# Dependencies
+node_modules/
+vendor/
+
+# Build
+*.zip
+*.tar.gz
+
+# Environment
+.env
+.env.local
+
+# WordPress
+wp-content/uploads/
