@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Zira Shipping
  * Description: Método de envío nacional con tarifas por zona basadas en Servientrega. Origen: Cuenca.
- * Version: 2.0.0
+ * Version: 2.0.1
  * Author: José Urgilés
  * Text Domain: zira-shipping
  * Domain Path: /languages
@@ -27,7 +27,7 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 }
 
 // ─── Constantes ────────────────────────────────────────────────
-define( 'ZIRA_SHIPPING_VERSION', '2.0.0' );
+define( 'ZIRA_SHIPPING_VERSION', '2.0.1' );
 define( 'ZIRA_SHIPPING_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'ZIRA_SHIPPING_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
