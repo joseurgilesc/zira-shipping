@@ -54,6 +54,8 @@
 			console.log('[Zira]   -', this.id, '| tag:', this.tagName, '| type attr:', $(this).attr('type'));
 		});
 
+		var recalcTimeout;
+
 		// Usar off/on para evitar duplicados
 		$(document.body).off('.ziraAdminProv');
 		$(document.body).on('change.ziraAdminProv select2:select.ziraAdminProv', '#_billing_city, #_shipping_city', function (e) {
@@ -91,6 +93,13 @@
 			} else {
 				console.log('[Zira] ERROR: No se encontró campo de estado para', isBilling ? 'billing' : 'shipping');
 			}
+
+			// Disparar recálculo automático (con debounce para evitar doble disparo)
+			clearTimeout(recalcTimeout);
+			recalcTimeout = setTimeout(function () {
+				console.log('[Zira] Disparando recálculo automático...');
+				$('.calculate-action').trigger('click');
+			}, 400);
 		});
 	}
 
